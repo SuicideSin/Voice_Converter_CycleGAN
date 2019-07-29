@@ -1,9 +1,20 @@
+***This fork introduces several changes:***
+
+Done:
+
+- Added `demo_server.py` for live evaluation of the trained model.
+- Library dependencies are now frozen in `requirements.txt`
+- Fixes to broken code
+
+TODO:
+
+- Supprt model transfer learning
+
 # Voice Converter CycleGAN
 
 Lei Mao
 
 University of Chicago
-
 
 ## Introduction
 

@@ -4,6 +4,8 @@ audioread==2.1.8
 cffi==1.12.3
 Cython==0.29.12
 decorator==4.4.0
+falcon==2.0.0
+falcon-multipart==0.2.0
 gast==0.2.2
 google-pasta==0.1.7
 grpcio==1.22.0
