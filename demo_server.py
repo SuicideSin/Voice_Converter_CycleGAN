@@ -8,13 +8,15 @@ Brandon Thomas 2019-07-29 <bt@brand.io> <echelon@gmail.com>
 """
 
 import argparse
-import soundfile
 import falcon
 import io
 import librosa
 import numpy as np
 import os
 import scipy
+import soundfile
+import subprocess
+import tempfile
 
 from falcon_multipart.middleware import MultipartMiddleware
 from model import CycleGAN
@@ -43,13 +45,16 @@ INDEX_HTML = '''
 
           console.log('preparing send');
   	  var xhr=new XMLHttpRequest();
+          xhr.responseType = 'blob';
 	  xhr.onload=function(e) {
             console.log('response received');
-            if (this.readyState === 4) {
+            /*if (this.readyState === 4) {
 	      console.log("Server returned: ",e.target.responseText);
-	    }
-            var blob = new Blob([xhr.response], {type: 'audio/wav'});
-            var objectUrl = URL.createObjectURL(blob);
+	    }*/
+            //var blob = new Blob([xhr.response], {type: 'audio/ogg'});
+            //var objectUrl = URL.createObjectURL(blob);
+	    var objectUrl = window.URL.createObjectURL(this.response);
+            console.log('audio URL', objectUrl);
             var audio = document.getElementById('audio');
             audio.src = objectUrl;
             audio.play();
@@ -211,10 +216,27 @@ Sample Encoding: 32-bit Floating Point PCM
         print(stereo_pcm_data.shape)
 
         #scipy.io.wavfile.write(buf, self.sampling_rate, wav_transformed)
+        print('--- scipy wavfile ---')
         buf = io.BytesIO()
-        scipy.io.wavfile.write(buf, 48000, stereo_pcm_data)
-        scipy.io.wavfile.write('output_server_test_2.wav', 48000, stereo_pcm_data)
+        scipy.io.wavfile.write(buf, 48000, stereo_pcm_data.astype(np.float32))
+        scipy.io.wavfile.write('output_server_test_2.wav', 48000, stereo_pcm_data.astype(np.float32))
+        print(buf)
         return buf
+
+
+        #print('--- sound file ---')
+        #sf = soundfile.SoundFile(buf)
+        #print(sf)
+        #buf2 = io.BytesIO()
+        #buf2 = bytearray(len(stereo_pcm_data))
+        #sf.buffer_read_into(buf2, dtype='int16')
+        #new_buf = sf.buffer_read(dtype='float64')
+        #print(new_buf)
+
+        #buf2 = sf.buffer_read(dtype='float64')
+        #print(buf2)
+        #print(dir(buf2))
+        #return buf2
 
 
 model_dir_default = './model/sf1_tm1'
@@ -265,8 +287,33 @@ class ApiHandler():
         downsampled = librosa.resample(mono, samplerate, 16000)
 
         buf = converter.convert(downsampled, conversion_direction = 'A2B')
-        response.content_type = 'audio/wav'
-        response.body = buf.getvalue()
+
+        temp_dir = tempfile.TemporaryDirectory(prefix='tmp_ml_audio')
+        f_input = tempfile.NamedTemporaryFile(suffix='.wav')
+        f_output = tempfile.NamedTemporaryFile(suffix='.wav')
+
+        f_input.write(buf.read())
+
+        print(temp_dir.name)
+        print(f_input.name)
+        print(f_output.name)
+        out_file = temp_dir.name + '/output.ogg'
+        #out_file = './temp_output.ogg'
+        print(out_file)
+
+        #out = subprocess.check_output(['ffmpeg', '-i', f_input.name, './ffmpeg_output.wav'])
+        #out = subprocess.check_output(['ffmpeg', '-i', f_input.name, out_file])
+        out = subprocess.check_output(['ffmpeg', '-i', f_input.name, '-acodec', 'libvorbis', out_file])
+        print(out)
+
+        #response.content_type = 'audio/wav'
+        response.content_type = 'audio/ogg'
+        with open(out_file, mode='rb') as f:
+            response.data = f.read()
+
+        #response.data = buf.getvalue()
+        #response.data = buf
+        #response.body = buf[:]
 
 def main():
     parser = argparse.ArgumentParser()
