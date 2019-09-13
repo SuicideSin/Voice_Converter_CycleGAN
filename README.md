@@ -10,6 +10,8 @@ TODO:
 
 - Supprt model transfer learning
 
+***USE:***: Put the trained model and related files under `model/sf1_tm1/`
+
 # Voice Converter CycleGAN
 
 Lei Mao
