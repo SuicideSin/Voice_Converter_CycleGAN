@@ -15,6 +15,7 @@ import numpy as np
 import os
 import scipy
 import soundfile
+import tensorflow as tf
 import subprocess
 import tempfile
 
@@ -22,6 +23,10 @@ from falcon_multipart.middleware import MultipartMiddleware
 from model import CycleGAN
 from preprocess import *
 from wsgiref import simple_server
+
+print("TensorFlow version: {}".format(tf.version.VERSION))
+sys.exit()
+
 
 INDEX_HTML = '''
 <!doctype html>
@@ -115,6 +120,18 @@ class Converter():
         self.model = CycleGAN(num_features = self.num_features, mode = 'test')
 
         self.model.load(filepath = os.path.join(model_dir, model_name))
+
+        # NB: Save the graph
+        definition = self.model.sess.graph_def
+        directory = 'output_model_pb'
+        tf.train.write_graph(definition, directory, 'model.pb', as_text=False)
+
+        # https://github.com/tensorflow/models/issues/3530#issuecomment-395968881
+        output_dir = './saved_model/'
+        builder = tf.saved_model.builder.SavedModelBuilder(output_dir)
+        builder.add_meta_graph_and_variables(self.model.sess, [
+          tf.saved_model.tag_constants.SERVING],)
+        builder.save()
 
         self.mcep_normalization_params = np.load(os.path.join(model_dir, 'mcep_normalization.npz'))
         self.mcep_mean_A = self.mcep_normalization_params['mean_A']
