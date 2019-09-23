@@ -126,10 +126,15 @@ class CycleGAN(object):
 
 
     def test(self, inputs, direction):
+        print(">>> model.test()!")
 
         if direction == 'A2B':
+            print("generation_B_test: {}".format(self.generation_B_test))
+            print("input_A_test: {}".format(self.input_A_test))
             generation = self.sess.run(self.generation_B_test, feed_dict = {self.input_A_test: inputs})
         elif direction == 'B2A':
+            print("generation_A_test: {}".format(self.generation_A_test))
+            print("input_B_test: {}".format(self.input_B_test))
             generation = self.sess.run(self.generation_A_test, feed_dict = {self.input_B_test: inputs})
         else:
             raise Exception('Conversion direction must be specified.')

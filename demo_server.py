@@ -25,8 +25,6 @@ from preprocess import *
 from wsgiref import simple_server
 
 print("TensorFlow version: {}".format(tf.version.VERSION))
-sys.exit()
-
 
 INDEX_HTML = '''
 <!doctype html>
@@ -123,15 +121,33 @@ class Converter():
 
         # NB: Save the graph
         definition = self.model.sess.graph_def
-        directory = 'output_model_pb'
-        tf.train.write_graph(definition, directory, 'model.pb', as_text=False)
+        directory = 'saved_model_2'
+        tf.train.write_graph(definition, directory, 'saved_model_2.pb', as_text=True)
 
         # https://github.com/tensorflow/models/issues/3530#issuecomment-395968881
         output_dir = './saved_model/'
         builder = tf.saved_model.builder.SavedModelBuilder(output_dir)
-        builder.add_meta_graph_and_variables(self.model.sess, [
-          tf.saved_model.tag_constants.SERVING],)
+
+        builder.add_meta_graph_and_variables(
+            self.model.sess,
+            [tf.saved_model.tag_constants.SERVING],
+            main_op=tf.tables_initializer(),
+        )
+
         builder.save()
+
+        """
+        builder.add_meta_graph_and_variables(
+            self.model.sess,
+            [tf.saved_model.tag_constants.SERVING],
+            signature_def_map={
+                'predict_images':
+                    prediction_signature,
+                signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY:
+                    classification_signature,
+            },
+            main_op=tf.tables_initializer())
+        """
 
         self.mcep_normalization_params = np.load(os.path.join(model_dir, 'mcep_normalization.npz'))
         self.mcep_mean_A = self.mcep_normalization_params['mean_A']
@@ -207,6 +223,7 @@ class ApiHandler():
         downsampled = librosa.resample(mono, samplerate, 16000)
 
         # Evaluate the model
+        print(">>> Converting...")
         results = converter.convert(downsampled, conversion_direction = 'A2B')
 
         temp_dir = tempfile.TemporaryDirectory(prefix='tmp_ml_audio')
